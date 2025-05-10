@@ -16,8 +16,9 @@ CURRENT_USER_ID = 1  # For example, Alice
 
 # --- GUI Setup ---
 root = tk.Tk()
-root.title("Movie Recommendation System")
-root.configure(bg="#FFC0CB")  # Light pink background
+root.title("🎀 Movie Recommendation System 🎬")
+root.configure(bg="#FFD1DC")  # Light pink background
+custom_font = ("Comic Sans MS", 10, "bold") #FONT STYLE
 
 # --- Helper Functions ---
 def get_genres():
@@ -208,13 +209,14 @@ def get_recommendations():
         messagebox.showinfo("Recommendations", "No new recommendations available for the most watched genre.")
 
 # --- Updated UI Layout ---
-genre_label = tk.Label(root, text="Select Genre:", bg="#FFC0CB")
-genre_label.pack()
+genre_label = tk.Label(root, text="🎞️ Select Genre:", bg="#FFD1DC", font=custom_font, fg="#8B008B")
+genre_label.pack(pady=5)
 
 genre_var = tk.StringVar(root)
 genres = get_genres()
 genre_menu = tk.OptionMenu(root, genre_var, *genres)
-genre_menu.pack()
+genre_menu.config(bg="#FFE4E1", fg="#800080", font=custom_font)
+genre_menu.pack(pady=5)
 
 def on_genre_select(*args):
     selected_genre = genre_var.get()
@@ -223,28 +225,39 @@ def on_genre_select(*args):
 
 genre_var.trace("w", on_genre_select)
 
-# Create Treeview for movie display
+# Treeview style
+style = ttk.Style()
+style.configure("Treeview", 
+                background="#FFF0F5", 
+                foreground="black", 
+                rowheight=25, 
+                fieldbackground="#FFF0F5", 
+                font=("Arial", 10))
+style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#FFB6C1", foreground="black")
+
 tree = ttk.Treeview(root, columns=('ID', 'Title', 'Description', 'Length', 'Rating', 'Release Year'), show='headings')
-tree.heading('ID', text='Movie ID')
-tree.heading('Title', text='Title')
-tree.heading('Description', text='Description')
-tree.heading('Length', text='Length (min)')
-tree.heading('Rating', text='Rating')
-tree.heading('Release Year', text='Release Year')
-tree.pack()
+tree.heading('ID', text='🎬 ID')
+tree.heading('Title', text='🎞️ Title')
+tree.heading('Description', text='📝 Description')
+tree.heading('Length', text='⏱️ Length')
+tree.heading('Rating', text='⭐ Rating')
+tree.heading('Release Year', text='📅 Year')
+tree.pack(pady=10)
 
-btn_frame = tk.Frame(root, bg="#FFC0CB")  # Frame background match
-btn_frame.pack()
+btn_frame = tk.Frame(root, bg="#FFD1DC")
+btn_frame.pack(pady=10)
 
-tk.Button(btn_frame, text="Search Movies", command=search_movies).grid(row=0, column=0, padx=5)
-tk.Button(btn_frame, text="Add to My List", command=add_to_my_list).grid(row=0, column=1, padx=5)
-tk.Button(btn_frame, text="Remove from My List", command=remove_from_my_list).grid(row=0, column=2, padx=5)
-tk.Button(btn_frame, text="View My List", command=view_my_list).grid(row=0, column=3, padx=5)
-tk.Button(btn_frame, text="Mark as Watched", command=mark_as_watched).grid(row=1, column=0, padx=5)
-tk.Button(btn_frame, text="View Watched", command=view_watched).grid(row=1, column=1, padx=5)
-tk.Button(btn_frame, text="Remove from Watched", command=remove_from_watched).grid(row=1, column=2, padx=5)
-tk.Button(btn_frame, text="Undo Watched Removal", command=undo_last_removal).grid(row=2, column=0, padx=5)
-tk.Button(btn_frame, text="Get Recommendations", command=get_recommendations).grid(row=2, column=1, padx=5)
+tk.Button(btn_frame, text="🔍 Search Movies", command=search_movies, font=custom_font, bg="#FFB6C1").grid(row=0, column=0, padx=5, pady=5)
+tk.Button(btn_frame, text="➕ Add to My List 💖", command=add_to_my_list, font=custom_font, bg="#FFB6C1").grid(row=0, column=1, padx=5, pady=5)
+tk.Button(btn_frame, text="❌ Remove from My List", command=remove_from_my_list, font=custom_font, bg="#FFB6C1").grid(row=0, column=2, padx=5, pady=5)
+tk.Button(btn_frame, text="📂 View My List", command=view_my_list, font=custom_font, bg="#FFB6C1").grid(row=0, column=3, padx=5, pady=5)
+
+tk.Button(btn_frame, text="✅ Mark as Watched", command=mark_as_watched, font=custom_font, bg="#E6E6FA").grid(row=1, column=0, padx=5, pady=5)
+tk.Button(btn_frame, text="🎥 View Watched", command=view_watched, font=custom_font, bg="#E6E6FA").grid(row=1, column=1, padx=5, pady=5)
+tk.Button(btn_frame, text="🚫 Remove from Watched", command=remove_from_watched, font=custom_font, bg="#E6E6FA").grid(row=1, column=2, padx=5, pady=5)
+
+tk.Button(btn_frame, text="↩️ Undo Watched Removal", command=undo_last_removal, font=custom_font, bg="#ADD8E6").grid(row=2, column=0, padx=5, pady=5)
+tk.Button(btn_frame, text="🎁 Get Recommendations", command=get_recommendations, font=custom_font, bg="#ADD8E6").grid(row=2, column=1, padx=5, pady=5)
 
 # --- Run App ---
 root.mainloop()
