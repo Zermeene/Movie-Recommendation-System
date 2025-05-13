@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 from tkinter import ttk
 import psycopg2
+import pyttsx3
 
 # --- Database Connection ---
 conn = psycopg2.connect(
@@ -14,11 +15,28 @@ conn = psycopg2.connect(
 cursor = conn.cursor()
 CURRENT_USER_ID = 1  # For example, Alice
 
+
+engine = pyttsx3.init()
+engine.say("Hello! Welcome to the movie recommendation system.")
+engine.runAndWait()
+
 # --- GUI Setup ---
 root = tk.Tk()
-root.title("🎀 Movie Recommendation System 🎬")
+root.title("🎀  Movie Recommendation System 🎬")
 root.configure(bg="#FFD1DC")  # Light pink background
 custom_font = ("Comic Sans MS", 10, "bold") #FONT STYLE
+def speak(text):
+    engine = pyttsx3.init()
+    engine.setProperty('rate', 150)  # Speed of speech
+    engine.setProperty('volume', 0.9)  # Volume level (0.0 to 1.0)
+    engine.say(text)
+    engine.runAndWait()
+# # --- Voice Feedback ---
+# speak("Please select a genre to get started.")
+# # --- Voice Feedback ---
+# speak("You can search for movies, add them to your list, or mark them as watched. Enjoy!")
+# # --- Voice Feedback ---
+# speak("If you need help, click the help button.")
 
 # --- Helper Functions ---
 def get_genres():
@@ -42,6 +60,7 @@ def show_movies_by_genre(genre):
 def add_to_my_list():
     selected_items = tree.selection()
     if not selected_items:  # If no item is selected
+        speak("Please select a movie to add.")
         return
     try:
         for item in selected_items:
@@ -50,12 +69,14 @@ def add_to_my_list():
             cursor.execute("""SELECT 1 FROM my_list WHERE user_id = %s AND movie_id = %s;""", (CURRENT_USER_ID, movie_id))
             if cursor.fetchone():
                 messagebox.showinfo("Info", f"Movie ID {movie_id} is already in My List.")
+                speak(f"Movie ID {movie_id} already in My list.")
             else:
                 cursor.execute("""
                 INSERT INTO my_list (user_id, movie_id)
                 VALUES (%s, %s) ON CONFLICT DO NOTHING;""", (CURRENT_USER_ID, movie_id))
         conn.commit()
         messagebox.showinfo("Success", "Movies added to My List.")
+        speak("Movie added to My list.")
     except Exception as e:
         conn.rollback()
         messagebox.showerror("Error", str(e))
@@ -63,6 +84,7 @@ def add_to_my_list():
 def remove_from_my_list():
     selected_items = tree.selection()
     if not selected_items: 
+        speak("Please select a movie to remove from my list.")
         return
     try:
         for item in selected_items:
@@ -72,6 +94,7 @@ def remove_from_my_list():
             WHERE user_id = %s AND movie_id = %s;""", (CURRENT_USER_ID, movie_id))
         conn.commit()
         messagebox.showinfo("Removed", "Movies removed from My List.")
+        speak("Movies removed from My List.")
     except Exception as e:
         conn.rollback()
         messagebox.showerror("Error", str(e))
@@ -98,15 +121,18 @@ def mark_as_watched():
             cursor.execute("""SELECT 1 FROM watched WHERE user_id = %s AND movie_id = %s;""", (CURRENT_USER_ID, movie_id))
             if cursor.fetchone():
                 messagebox.showinfo("Info", f"Movie ID {movie_id} is already marked as watched.")
+                speak(f"Movie ID {movie_id} already marked as watched.")
             else:
                 cursor.execute("""
                 INSERT INTO watched (user_id, movie_id)
                 VALUES (%s, %s) ON CONFLICT DO NOTHING;""", (CURRENT_USER_ID, movie_id))
         conn.commit()
         messagebox.showinfo("Watched", "Movies marked as watched.")
+        speak("Movies marked as watched.")
     except Exception as e:
         conn.rollback()
         messagebox.showerror("Error", str(e))
+
 
 def view_watched():
     for i in tree.get_children():
@@ -122,6 +148,8 @@ def view_watched():
 def remove_from_watched():
     selected_items = tree.selection()
     if not selected_items:
+        speak("Please select a movie to remove from watched.")
+        messagebox.showinfo("Info", "Please select a movie to remove from watched.")
         return
     try:
         for item in selected_items:
@@ -131,6 +159,8 @@ def remove_from_watched():
             WHERE user_id = %s AND movie_id = %s;""", (CURRENT_USER_ID, movie_id))
         conn.commit()
         messagebox.showinfo("Removed", "Movies removed from Watched.")
+        speak("Movies removed from Watched.")
+        # Move to undo_watched
     except Exception as e:
         conn.rollback()
         messagebox.showerror("Error", str(e))
@@ -155,8 +185,10 @@ def undo_last_removal():
             WHERE user_id = %s AND movie_id = %s;""", (user_id, movie_id))
             conn.commit()
             messagebox.showinfo("Undo", f"Restored movie ID {movie_id} to Watched.")
+            speak(f"Restored movie ID {movie_id} to Watched.")
         else:
             messagebox.showinfo("Undo", "No recently removed movie to undo.")
+            speak("No recently removed movie to undo.")
     except Exception as e:
         conn.rollback()
         messagebox.showerror("Error", str(e))
@@ -164,6 +196,8 @@ def undo_last_removal():
 def search_movies():
     movie_name = simpledialog.askstring("Movie Search", "Enter movie name:")
     if not movie_name:
+        
+        speak("Please enter a movie name.")
         return
     for i in tree.get_children():
         tree.delete(i)
@@ -176,6 +210,8 @@ def search_movies():
             tree.insert('', 'end', values=movie)
     else:
         messagebox.showinfo("Search Result", "No movie found with that name.")
+        speak("No movie found with that name.")
+        return  
 
 def get_recommendations():
     cursor.execute("""
@@ -190,6 +226,7 @@ def get_recommendations():
     most_watched_genre = cursor.fetchone()
     if not most_watched_genre:
         messagebox.showinfo("Recommendations", "No watched movies to base recommendations on.")
+        speak("No watched movies to base recommendations on.")
         return
 
     genre = most_watched_genre[0]
@@ -207,6 +244,8 @@ def get_recommendations():
             tree.insert('', 'end', values=movie)
     else:
         messagebox.showinfo("Recommendations", "No new recommendations available for the most watched genre.")
+        speak("No new recommendations available for the most watched genre.")
+        return  
 
 # --- Updated UI Layout ---
 genre_label = tk.Label(root, text="🎞️ Select Genre:", bg="#FFD1DC", font=custom_font, fg="#8B008B")
@@ -235,9 +274,10 @@ style.configure("Treeview",
                 font=("Arial", 10))
 style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#FFB6C1", foreground="black")
 
-tree = ttk.Treeview(root, columns=('ID', 'Title', 'Description', 'Length', 'Rating', 'Release Year'), show='headings')
+tree = ttk.Treeview(root, columns=('ID', 'Title', 'Genre', 'Description', 'Length', 'Rating', 'Release Year'), show='headings')
 tree.heading('ID', text='🎬 ID')
 tree.heading('Title', text='🎞️ Title')
+tree.heading('Genre', text='🎭 Genre')
 tree.heading('Description', text='📝 Description')
 tree.heading('Length', text='⏱️ Length')
 tree.heading('Rating', text='⭐ Rating')
@@ -258,6 +298,24 @@ tk.Button(btn_frame, text="🚫 Remove from Watched", command=remove_from_watche
 
 tk.Button(btn_frame, text="↩️ Undo Watched Removal", command=undo_last_removal, font=custom_font, bg="#ADD8E6").grid(row=2, column=0, padx=5, pady=5)
 tk.Button(btn_frame, text="🎁 Get Recommendations", command=get_recommendations, font=custom_font, bg="#ADD8E6").grid(row=2, column=1, padx=5, pady=5)
+tk.Button(btn_frame, text="❓ Help", command=lambda: messagebox.showinfo("Help", "Select a genre to view movies. Use the buttons to manage your list."), font=custom_font, bg="#ADD8E6").grid(row=2, column=2, padx=5, pady=5)
+def exit_app():
+    speak("Thank you for using the Movie Recommendation System. Have a great day! ALLAH HAFIZ")
+    root.quit()
+
+tk.Button(btn_frame, text="❗ Exit", command=exit_app, font=custom_font, bg="#FF6347").grid(row=2, column=3, padx=5, pady=5)
+
+
+# --- Bindings ---
+def on_closing():
+    conn.close()
+    root.destroy()
+root.protocol("WM_DELETE_WINDOW", on_closing)
+
+
+
+
 
 # --- Run App ---
 root.mainloop()
+
