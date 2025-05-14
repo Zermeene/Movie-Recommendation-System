@@ -8,7 +8,7 @@ from collections import Counter
 # Initialize Firebase
 def initialize_firebase():
     if not firebase_admin._apps:
-        cred = credentials.Certificate(r"D:\movies\movie-recommendation-sys-bb651-firebase-adminsdk-fbsvc-b43294d314.json")
+        cred = credentials.Certificate(r"D:\movies\movie-recommendation-sys-bb651-firebase-adminsdk-fbsvc-da82ecd839.json")
         firebase_admin.initialize_app(cred)
     return firestore.client()
 
@@ -63,16 +63,17 @@ def speak(text):
     engine.runAndWait()
 
 speak("we welcome you to our Movie recommendation system.")
-# --- Recommendation Function ---
+# --- Recommendation Function ---  
 def get_recommendations():
     user_movies = fb_client.collection('my_list').where('user_id', '==', CURRENT_USER_ID).stream()
     genres = []
+    user_movie_ids = set()
 
     for doc in user_movies:
         data = doc.to_dict()
         genres.append(data.get('genre', ''))
+        user_movie_ids.add(data.get('ID'))  # <-- Compare using stored movie ID, not Firestore doc.id
 
-    # Find the top 3 genres
     if genres:
         top_genres = Counter(genres).most_common(3)
         recommendations = set()
@@ -82,23 +83,26 @@ def get_recommendations():
             for movie in genre_movies:
                 movie_data = movie.to_dict()
                 movie_data['id'] = movie.id
-                # Store the relevant movie info in a tuple
-                recommendation_tuple = (
-                    movie.id,
-                    movie_data.get('title', ''),
-                    movie_data.get('genre', ''),
-                    movie_data.get('description', ''),
-                    movie_data.get('length', ''),
-                    movie_data.get('rating', ''),
-                    movie_data.get('release_year', '')
-                )
-                recommendations.add(recommendation_tuple)
-        speak("Top Five recommended movie. yaaayy")
 
-        return list(recommendations)[:5]  # Limit to 5 recommendations
+                # Check if the movie is not already in the user's list
+                if movie.id not in user_movie_ids:
+                    recommendation_tuple = (
+                        movie.id,
+                        movie_data.get('title', ''),
+                        movie_data.get('genre', ''),
+                        movie_data.get('description', ''),
+                        movie_data.get('length', ''),
+                        movie_data.get('rating', ''),
+                        movie_data.get('release_year', '')
+                    )
+                    recommendations.add(recommendation_tuple)
+
+        speak("Top recommended movies.")
+        return list(recommendations)[:5]
     else:
         speak("No movie to recommend.")
         return []
+  
 
 # --- Main App ---
 def main_app():
@@ -301,7 +305,7 @@ def main_app():
     ttk.Button(button_frame, text="✨ Get Recommendations", command=recommend_movies).pack(side=tk.LEFT, padx=5)
 
     root.mainloop()
-    speak("Allah hafiz")
+    speak("Exiting movie recommendation systtem")
 
 # --- Start ---
 if __name__ == "__main__":
