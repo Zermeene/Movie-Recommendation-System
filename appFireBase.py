@@ -1,8 +1,9 @@
 import tkinter as tk
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import messagebox, ttk
 import pyttsx3
 import firebase_admin
 from firebase_admin import credentials, firestore
+from collections import Counter
 
 # Initialize Firebase
 def initialize_firebase():
@@ -46,7 +47,7 @@ def search_all_movies(title):
     results = []
     for doc in movies_ref:
         data = doc.to_dict()
-        if title.lower() in data.get('title', '').lower():  # Case insensitive search
+        if title.lower() in data.get('title', '').lower(): 
             data['id'] = doc.id  # Add document ID
             results.append(data)
     return results
@@ -54,14 +55,54 @@ def search_all_movies(title):
 # --- Voice Feedback Function ---
 def speak(text):
     engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[1].id)
     engine.setProperty('rate', 150)
     engine.setProperty('volume', 0.9)
     engine.say(text)
     engine.runAndWait()
 
+speak("we welcome you to our Movie recommendation system.")
+# --- Recommendation Function ---
+def get_recommendations():
+    user_movies = fb_client.collection('my_list').where('user_id', '==', CURRENT_USER_ID).stream()
+    genres = []
+
+    for doc in user_movies:
+        data = doc.to_dict()
+        genres.append(data.get('genre', ''))
+
+    # Find the top 3 genres
+    if genres:
+        top_genres = Counter(genres).most_common(3)
+        recommendations = set()
+
+        for genre, _ in top_genres:
+            genre_movies = fb_client.collection('movies').where('genre', '==', genre).stream()
+            for movie in genre_movies:
+                movie_data = movie.to_dict()
+                movie_data['id'] = movie.id
+                # Store the relevant movie info in a tuple
+                recommendation_tuple = (
+                    movie.id,
+                    movie_data.get('title', ''),
+                    movie_data.get('genre', ''),
+                    movie_data.get('description', ''),
+                    movie_data.get('length', ''),
+                    movie_data.get('rating', ''),
+                    movie_data.get('release_year', '')
+                )
+                recommendations.add(recommendation_tuple)
+        speak("Top Five recommended movie. yaaayy")
+
+        return list(recommendations)[:5]  # Limit to 5 recommendations
+    else:
+        speak("No movie to recommend.")
+        return []
+
 # --- Main App ---
 def main_app():
-    global CURRENT_USER_ID, tree, last_deleted_document
+    global CURRENT_USER_ID, tree, last_deleted_document, fb_client
 
     CURRENT_USER_ID = 1  # Example user ID
     fb_client = initialize_firebase()
@@ -77,7 +118,18 @@ def main_app():
     tree = ttk.Treeview(root, columns=columns, show='headings', height=15)
     for col in columns:
         tree.heading(col, text=col)
-        tree.column(col, width=100)
+        if col == "ID":
+            tree.column(col, width=50)
+        elif col == "Title":
+            tree.column(col, width=150)
+        elif col == "Genre":
+            tree.column(col, width=75)
+        elif col == "Description":
+            tree.column(col, width=400)
+        elif col in ["Rating", "Year"]:
+            tree.column(col, width=50)
+        else:
+            tree.column(col, width=100)
     tree.pack(pady=10)
 
     # --- Function to Get Genres ---
@@ -88,6 +140,7 @@ def main_app():
             data = doc.to_dict()
             if 'genre' in data:
                 genres.add(data['genre'])
+        genres.add("ALL")  # Add "ALL" option
         return sorted(list(genres))
 
     # --- Show Movies by Genre ---
@@ -95,7 +148,11 @@ def main_app():
         for i in tree.get_children():
             tree.delete(i)
 
-        docs = fb_client.collection('movies').where('genre', '==', genre).stream()
+        if genre == "ALL":
+            docs = fb_client.collection('movies').stream()
+        else:
+            docs = fb_client.collection('movies').where('genre', '==', genre).stream()
+
         for doc in docs:
             data = doc.to_dict()
             tree.insert('', 'end', values=(
@@ -147,7 +204,6 @@ def main_app():
         for doc in docs:
             data = doc.to_dict()
             tree.insert('', 'end', values=(
-                # Include document ID
                 doc.id,  # Add document ID here for display
                 data.get('title', ''),
                 data.get('genre', ''),
@@ -167,11 +223,12 @@ def main_app():
         for item in selected_items:
             movie_id = tree.item(item, 'values')[0]  # Get the document ID
             last_movie_data = read_document('my_list', movie_id)  # Save for undo
-            if last_movie_data:
-                last_deleted_document = last_movie_data  # Store the data, not just the ID
+            if last_movie_data:  # Store the data, not just the ID
+                last_deleted_document = last_movie_data
             delete_document('my_list', movie_id)  # Delete from Firestore
-            speak("Movie deleted successfully from My List.")
+            
         show_my_list()  # Refresh the list
+        speak("Movie deleted successfully from My List.")
 
     # --- Undo Delete ---
     def undo_delete():
@@ -206,6 +263,14 @@ def main_app():
         else:
             speak("Please enter a title to search.")
 
+    # --- Get Recommendations ---
+    def recommend_movies():
+        recommendations = get_recommendations()
+        for i in tree.get_children():
+            tree.delete(i)
+        for movie in recommendations:
+            tree.insert('', 'end', values=movie)
+
     # --- Genre Dropdown and Buttons ---
     genre_var = tk.StringVar(root)
     genres = get_genres()
@@ -233,8 +298,10 @@ def main_app():
     ttk.Button(button_frame, text="🗑️ Delete from My List", command=delete_from_my_list).pack(side=tk.LEFT, padx=5)
     ttk.Button(button_frame, text="↩️ Undo Delete", command=undo_delete).pack(side=tk.LEFT, padx=5)
     ttk.Button(button_frame, text="🔍 Search Movies", command=search_movies_by_title).pack(side=tk.LEFT, padx=5)
+    ttk.Button(button_frame, text="✨ Get Recommendations", command=recommend_movies).pack(side=tk.LEFT, padx=5)
 
     root.mainloop()
+    speak("Allah hafiz")
 
 # --- Start ---
 if __name__ == "__main__":
